@@ -1,0 +1,37 @@
+#!/bin/bash
+
+declare -r _LOG="/var/log/logfile"
+declare -r _AUDIT="/var/log/audit/audit.log"
+
+declare -r _RUNNING_QUERIES="grep queries ${_LOG}"
+declare -r _SEARCH_EXECUTED="grep SearchExecuted ${_AUDIT}"
+
+stats() {
+    
+    local __recent_search="$(${_SEARCH_EXECUTED} | grep -v CommandExecuted | tail -n1)"
+    local __source="$(${_SEARCH_EXECUTED} | grep -v CommandExecuted | tail -n1 | egrep -o 'Source:(.*?),Params:' | cut -d ',' -f 1 | sed -e 's/:/: /g')"
+
+    printf "\nMost recent search:\n${__recent_search}\n\n"
+    printf "${__source}\n\n"
+}
+
+query_check() {
+
+    local __last_occurence="$(${_RUNNING_QUERIES} | tail -n1)"	
+    local __num_queries="$(${_RUNNING_QUERIES} | tail -n1 | egrep -o 'Server\sis\srunning\s([[:digit:]]+)\squeries' | egrep -o '[[:digit:]]')"
+    local __current_time=$(date +%b\ %d\ %T)
+
+    if [[ "${__last_occurence}" == "${__current_time}" ]]; then
+        echo "There are ${__num_queries} queries running."    
+    else
+        echo "No queries running at this time."
+    fi    
+}
+
+main() {
+
+    query_check
+    stats
+}
+
+main && exit 0
